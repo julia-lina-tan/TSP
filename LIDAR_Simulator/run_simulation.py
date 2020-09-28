@@ -17,7 +17,8 @@ import numpy as np
 import matplotlib.pylab as pl
 import yaml
 from obstacle import Obstacle
-#from moviepy.editor import VideoClip #moviepy v. 0.2.2.11
+from moviepy.editor import ImageSequenceClip
+
 
 
 def connect_segments(segments, resolution = 0.01):
@@ -282,8 +283,9 @@ def update_text_file(text_file, data, file_format='carmen'):
     """
     if file_format == 'carmen':
         #http://www2.informatik.uni-freiburg.de/~stachnis/datasets.html
+        last_hit = '{:f}'.format(data[-1])
         data = ''.join(['%f ' % num for num in data])
-        data = 'FLASER 180 ' + data[:-1] + '\n'#Get rid of the last comma
+        data = 'FLASER 180 ' + data[:-1] + ' pippo ' + last_hit + '\n'#Get rid of the last comma
     elif file_format == 'txy':
         data = ''.join(['%f, %f, %f \n' % (t,x,y) for (t,x,y) in data])
     elif file_format == 'txyout':
@@ -292,7 +294,19 @@ def update_text_file(text_file, data, file_format='carmen'):
         pass
     text_file.write(data)
 
-def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_data_as_npz = True, n_reflections = 360,
+
+def make_gif(frames, out_fn):
+    """
+    :param frames: list of .png files representing frames in the animation
+    :param out_fn: name of the output folder - create this folder inside the output folder
+    :return: .gif file showing the simulated path as an animation
+    """
+    ofn = 'outputs/' + out_fn + '/'
+    clip = ImageSequenceClip(frames, fps=4)
+    clip.write_gif(ofn + out_fn + '.gif')
+    clip.close()
+
+def main(env, out_fn, out_file_type = 'txyocc', save_all_data_as_npz = True, n_reflections = 360,
          fov = 180, max_laser_distance = 12, unoccupied_points_per_meter = 0.5):
     """
     :param env: name of the yaml file inside the config folder
@@ -322,6 +336,7 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
 
     output_file_name = ofn + output_file_ext
     text_file = open(output_file_name, 'w')
+    frames = []
 
     for t in range(len(robot_poses)):
         print('time = {}...'.format(t))
@@ -371,6 +386,7 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
         pl.tight_layout()
         pl.savefig(ofn + out_fn + '_frame_{}.png'.format(t))   #Or,
         # pl.show()
+        frames.append(ofn + out_fn + '_frame_{}.png'.format(t))
 
         if out_file_type == 'carmen':
             update_text_file(text_file, data=dist_theta, file_format='carmen')
@@ -378,17 +394,23 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
             update_text_file(text_file, data=np.hstack((t*np.ones(laser_data_xyout_filled.shape[0])[:, np.newaxis], laser_data_xyout_filled)), file_format='txyout')
 
     text_file.close()
+
+    make_gif(frames, out_fn)
+
     print('Images printed in ' + ofn)
     print(ofn + out_fn + '_robot_poses.npz' + ' created!')
     print(output_file_name + ' created!')
     if save_all_data_as_npz is True:
-        print('All data files saved in' + ofn)
+        print('All data files saved in ' + ofn)
 
 if __name__ == "__main__":
     # file configuration
-    env = 'toy1' # name of the yaml file inside the config folder
-    out_fn = 'toy1_setting1'# name of the output folder - create this folder inside the output folder
-    out_file_type = 'carmen' # or 'txyocc' or 'carmen'
+    env = input("Enter name of the yaml file inside the config folder: ");
+    out_fn = input("Enter name of the output folder: ");
+
+    # env = 'toy1' # name of the yaml file inside the config folder
+    # out_fn = 'toy1_setting1'# name of the output folder - create this folder inside the output folder
+    out_file_type = 'txyocc' # or 'txyocc' or 'carmen'
     save_all_data_as_npz = True # save all data for each time step for offline use - this will require memory
 
     # robot configuration
