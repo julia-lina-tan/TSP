@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import torch as pt
 import matplotlib.pyplot as pl
-from bhmtorch_cpu import BHM2D_PYTORCH
 
 def getPartitions(cell_max_min, nPartx1, nPartx2):
     """
@@ -29,10 +28,10 @@ def getPartitions(cell_max_min, nPartx1, nPartx2):
 
 def load_parameters(case):
     parameters = \
-        {'static_test1': \
-             ( os.path.abspath('../../Datasets/simulated/static_test2'),
-              (0.5, 0.5), #hinge point resolution
-              (-100, 100, -100, 100), #area [min1, max1, min2, max2]
+        {filename: \
+             ( os.path.abspath('../../Datasets/simulated/'+filename),
+              (1, 1), #hinge point resolution
+              (0, 200, -100, 150), #area [min1, max1, min2, max2]
               None,
               None,
               0.5, #gamma
@@ -45,10 +44,13 @@ def load_parameters(case):
 # Settings
 dtype = pt.float32
 device = pt.device("cpu")
-#device = pt.device("cuda:0") # Uncomment this to run on GPU
+# device = pt.device("cuda:0") # Uncomment this to run on GPU
+
+# Get the filename to read data points from
+filename = input("Input file: ")
 
 # Read the file
-fn_train, cell_resolution, cell_max_min, _, _, gamma = load_parameters('static_test1')
+fn_train, cell_resolution, cell_max_min, _, _, gamma = load_parameters(filename)
 
 # Partition the environment into to 4 areas
 # TODO: We can parallelize this
@@ -91,14 +93,18 @@ for segi in range(len(cell_max_min_segments)):
     toPlot.append((Xq,yq))
 print(' Total training time={} s'.format(np.round(totalTime, 2)))
 
-# Plot frame i
+# Scatter plot raw data 
+pl.rcParams['figure.facecolor'] = 'white'
+pl.scatter(X[:,0], X[:,1], c=y, cmap='jet')
+
+# Plot occupancy map
 pl.close('all')
 for segi in range(len(cell_max_min_segments)):
     ploti = toPlot[segi]
     Xq, yq = ploti[0], ploti[1]
     pl.scatter(Xq[:, 0], Xq[:, 1], c=yq, cmap='jet', s=5, vmin=0, vmax=1)
 pl.colorbar()
-pl.xlim([-100,100]); pl.ylim([-100,100])
-pl.title('static_test2')
-#pl.savefig(os.path.abspath('../../Outputs/static_test1.png'))
+pl.xlim([0,200]); pl.ylim([-100,150])
+pl.title(filename)
+#pl.savefig(os.path.abspath('../../Outputs/'+filename+'.png'))
 pl.show()
